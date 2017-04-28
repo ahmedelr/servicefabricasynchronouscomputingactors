@@ -39,14 +39,14 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService.Interfaces
         /// </summary>
         /// <param name="message">The message to process.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        Task<bool> StartSequentialProcessingAsync(Message message);
+        Task<bool> StartSequentialProcessingAsync(Q2Message message);
 
         /// <summary>
         ///     Starts processing a message on a separate task.
         /// </summary>
         /// <param name="message">The message to process.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        Task<bool> StartParallelProcessingAsync(Message message);
+        Task<bool> StartParallelProcessingAsync(Q2Message message);
 
         /// <summary>
         ///     Stops the sequential processing task.
@@ -68,7 +68,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService.Interfaces
         /// <param name="messageId">The message id.</param>
         /// <param name="returnValue">The message processing result.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        Task<bool> ReturnSequentialProcessingAsync(string messageId, long returnValue);
+        Task<bool> ReturnSequentialProcessingAsync(Q2Message message, string messageId, string startTime, string endTime, string status, long returnValue);
 
         /// <summary>
         ///     Used by the parallel processing task to signal the completion
@@ -77,7 +77,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService.Interfaces
         /// <param name="messageId">The message id.</param>
         /// <param name="returnValue">The message processing result.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        Task<bool> ReturnParallelProcessingAsync(string messageId, long returnValue);
+        Task<bool> ReturnParallelProcessingAsync(Q2Message message, string messageId, long returnValue);
 
         /// <summary>
         ///     Checks if the sequential processing task is running.
@@ -104,5 +104,13 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService.Interfaces
         /// </summary>
         /// <returns>The worker actor statistics.</returns>
         Task<Statistics> GetProcessingStatisticsAsync();
+
+        /// <summary>
+        ///     Gets the messages from StateManager which were added through a parallel processing call from ProcessorActor.
+        ///     This method gives the Processor a way to retrieve the final message from the ReferenceRange and Delta processing.
+        /// </summary>
+        /// <param name="runningState">True if the sequential processing task is still running, false otherwise.</param>
+        /// <returns>True if the operation completes successfully, false otherwise.</returns>
+        Task<Q2Message> GetParallelProcessingResultAsync();
     }
 }

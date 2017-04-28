@@ -40,6 +40,6 @@ namespace Microsoft.AzureCat.Samples.Entities
         ///     Gets or sets the message sent to the worker actor.
         /// </summary>
         [JsonProperty(PropertyName = "message", Order = 2)]
-        public Message Message { get; set; }
+        public Q2Message Message { get; set; }
     }
 }

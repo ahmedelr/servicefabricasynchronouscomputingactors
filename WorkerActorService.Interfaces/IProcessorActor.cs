@@ -48,6 +48,6 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService.Interfaces
         /// <param name="message">The message to process</param>
         /// <param name="cancellationToken">This CancellationToken is used to stop message processing.</param>
         /// <returns></returns>
-        Task ProcessParallelMessagesAsync(string workerId, Message message, CancellationToken cancellationToken);
+        Task ProcessParallelMessagesAsync(string workerId, Q2Message message, CancellationToken cancellationToken);
     }
 }

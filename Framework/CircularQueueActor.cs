@@ -73,7 +73,7 @@ namespace Microsoft.AzureCat.Samples.Framework
         /// </summary>
         /// <param name="item">The object to add to the circular queue. The value cannot be null.</param>
         /// <returns>The asynchronous result of the operation.</returns>
-        public virtual async Task EnqueueAsync(Message item)
+        public virtual async Task EnqueueAsync(Q2Message item)
         {
             try
             {
@@ -103,7 +103,7 @@ namespace Microsoft.AzureCat.Samples.Framework
         ///     Removes and returns the object at the beginning of the circular queue.
         /// </summary>
         /// <returns>The object that is removed from the beginning of the circular queue.</returns>
-        public virtual async Task<Message> DequeueAsync()
+        public virtual async Task<Q2Message> DequeueAsync()
         {
             try
             {
@@ -118,7 +118,7 @@ namespace Microsoft.AzureCat.Samples.Framework
                 var tail = tailResult.Value;
                 var header = headerResult.Value == long.MaxValue ? 0 : headerResult.Value + 1;
                 var key = header.ToString();
-                var result = await StateManager.TryGetStateAsync<Message>(key);
+                var result = await StateManager.TryGetStateAsync<Q2Message>(key);
                 if (!result.HasValue)
                 {
                     return null;
@@ -139,16 +139,16 @@ namespace Microsoft.AzureCat.Samples.Framework
         ///     Removes and returns a collection collection containing all the objects in the circular queue.
         /// </summary>
         /// <returns>A collection containing all the objects in the queue.</returns>
-        public virtual async Task<IEnumerable<Message>> DequeueAllAsync()
+        public virtual async Task<IEnumerable<Q2Message>> DequeueAllAsync()
         {
             try
             {
-                var list = new List<Message>();
+                var list = new List<Q2Message>();
                 var names = await StateManager.GetStateNamesAsync();
                 var i = 0;
                 foreach (var name in names)
                 {
-                    var result = await StateManager.TryGetStateAsync<Message>(name);
+                    var result = await StateManager.TryGetStateAsync<Q2Message>(name);
                     if (result.HasValue)
                         list.Add(result.Value);
                     await StateManager.TryRemoveStateAsync(name);
@@ -170,7 +170,7 @@ namespace Microsoft.AzureCat.Samples.Framework
         ///     Returns the object at the beginning of the circular queue without removing it.
         /// </summary>
         /// <returns>The object at the beginning of the circular queue.</returns>
-        public virtual async Task<Message> PeekAsync()
+        public virtual async Task<Q2Message> PeekAsync()
         {
             try
             {
@@ -182,7 +182,7 @@ namespace Microsoft.AzureCat.Samples.Framework
                 }
                 var current = header == long.MaxValue ? 0 : header + 1;
                 var key = current.ToString();
-                var result = await StateManager.TryGetStateAsync<Message>(key);
+                var result = await StateManager.TryGetStateAsync<Q2Message>(key);
                 ActorEventSource.Current.Message($"Message successfully peeked. Header=[{header}] Tail=[{tail}]");
                 return !result.HasValue ? null : result.Value;
             }

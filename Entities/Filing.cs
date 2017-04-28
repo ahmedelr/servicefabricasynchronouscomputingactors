@@ -19,42 +19,46 @@
 
 #region Using Directives
 
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 #endregion
 
 namespace Microsoft.AzureCat.Samples.Entities
 {
-    public class Result
+    /// <summary>
+    ///     Represents messages elaborated by the worker and processor actors.
+    /// </summary>
+    public class Filing
     {
         /// <summary>
-        ///     Gets or sets the message id.
+        ///     Gets or sets the starttime.
         /// </summary>
-        [JsonProperty(PropertyName = "messageId", Order = 1)]
-        public string MessageId { get; set; }
-
-        /// <summary>
-        ///     Gets or sets the start time.
-        /// </summary>
-        [JsonProperty(PropertyName = "startTime", Order = 2)]
+        [JsonProperty(PropertyName = "starttime", Order = 1)]
         public string StartTime { get; set; }
 
         /// <summary>
-        ///     Gets or sets the endTime.
+        ///     Gets or sets the endtime.
         /// </summary>
-        [JsonProperty(PropertyName = "endTime", Order = 3)]
+        [JsonProperty(PropertyName = "endtime", Order = 2)]
         public string EndTime { get; set; }
 
         /// <summary>
         ///     Gets or sets the status.
         /// </summary>
-        [JsonProperty(PropertyName = "status", Order = 4)]
+        [JsonProperty(PropertyName = "status", Order = 3)]
         public string Status { get; set; }
 
         /// <summary>
-        ///     Gets or sets the result.
+        ///     Gets or sets the errorcode
         /// </summary>
-        [JsonProperty(PropertyName = "returnValue", Order = 5)]
-        public long ReturnValue { get; set; }
+        [JsonProperty(PropertyName = "errorcode", Order = 4)]
+        public string ErrorCode { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the errormessage
+        /// </summary>
+        [JsonProperty(PropertyName = "errormessage", Order = 5)]
+        public string ErrorMessage { get; set; }
     }
 }

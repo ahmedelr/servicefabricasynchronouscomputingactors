@@ -225,6 +225,7 @@ namespace Microsoft.AzureCat.Samples.TestClient
                     Console.WriteLine($" - [{DateTime.Now.ToLocalTime()}] Waiting for the sequential message processing task completion...");
                     Task.Delay(TimeSpan.FromSeconds(1)).Wait();
                 }
+
                 Console.WriteLine($" - [{DateTime.Now.ToLocalTime()}] Sequential message processing task completed.");
 
                 // Retrieves statistics
@@ -441,7 +442,7 @@ namespace Microsoft.AzureCat.Samples.TestClient
                             new Payload
                             {
                                 WorkerId = workerId,
-                                Message = new Message
+                                Message = new Q2Message
                                 {
                                     MessageId = messageId
                                 }
@@ -970,23 +971,77 @@ namespace Microsoft.AzureCat.Samples.TestClient
             }
         }
 
-        private static List<Message> CreateMessageList(int messages = -1, int stepCount = -1)
+        private static List<Q2Message> CreateMessageList(int messages = -1, int stepCount = -1)
         {
-            var messageList = new List<Message>();
+            var messageList = new List<Q2Message>();
             var random = new Random();
             stepCount = stepCount < 0 ? steps : stepCount;
             messages = messages < 0 ? messageCount : messages;
             for (var i = 0; i < messages; i++)
                 messageList.Add(
-                    new Message
+                    new Q2Message
                     {
+                        MessageVersion = $"v1.0.0",
                         MessageId = $"{++id:000}",
                         Body = $"value: {random.Next(1, 51)}",
                         Properties = new Dictionary<string, object>
                         {
                             {DelayProperty, TimeSpan.FromSeconds(delay)},
                             {StepsProperty, stepCount}
-                        }
+                        },
+                        ResultInfo = new ResultInfo
+                        {
+                            Result = "192.29",
+                            Accession = "GUID9128wd8fj8jsdf890js0d9fj",
+                            Analyte = "GUID929jsd9fjs9dfj9j2",
+                            Unit = "mg/mol",
+                            ResultedDate = "20170503162312",
+                            ResultingUser = "Bill",
+                            ReleasingUser = "Bob",
+                            Comment = "This is a test",
+                            Facility = "GUID929jsd9fj92j9sjd",
+                            StudyId = "GUID292939429jsd9fj"
+                        },
+                        ResultingStatus = new ResultingStatus
+                        {
+                            Filing = new Filing
+                            {
+                                StartTime = "",
+                                EndTime = "",
+                                Status = "",
+                                ErrorCode = "",
+                                ErrorMessage = ""
+
+                            },
+                            ReferenceRange = new ReferenceRange
+                            {
+                                StartTime = "",
+                                EndTime = "",
+                                Status = "",
+                                ErrorCode = "",
+                                ErrorMessage = ""
+
+                            },
+                            Delta = new Delta
+                            {
+                                StartTime = "",
+                                EndTime = "",
+                                Status = "",
+                                ErrorCode = "",
+                                ErrorMessage = ""
+
+                            },
+                            CustomRule = new CustomRule
+                            {
+                                StartTime = "",
+                                EndTime = "",
+                                Status = "",
+                                ErrorCode = "",
+                                ErrorMessage = ""
+
+                            }
+                        },
+                        StudyInfo = ""
                     });
             return messageList;
         }
@@ -1076,9 +1131,10 @@ namespace Microsoft.AzureCat.Samples.TestClient
     internal class WorkerActorEventHandler : IWorkerActorEvents
     {
         #region IWorkerActorEvents
-        public void MessageProcessingCompleted(string messageId, long returnValue)
+        public void MessageProcessingCompleted(Q2Message message, string messageId, string startTime, string endTime, string status, long returnValue)
         {
-            Console.WriteLine($" - [{DateTime.Now.ToLocalTime()}] Message complete: Message=[{messageId}] Value=[{returnValue}].");
+            Console.WriteLine($" - [{DateTime.Now.ToLocalTime()}] Message complete: Message=[{messageId}] Status=[{status}] Value=[{returnValue}].");
+            Console.WriteLine($"Message -----[{JsonSerializerHelper.Serialize(message)}]");
         }
         #endregion
     }

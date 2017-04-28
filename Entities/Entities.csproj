@@ -46,7 +46,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Delta.cs" />
+    <Compile Include="CustomRule.cs" />
+    <Compile Include="ResultingStatus.cs" />
+    <Compile Include="ReferenceRange.cs" />
+    <Compile Include="Filing.cs" />
     <Compile Include="JsonSerializerHelper.cs" />
+    <Compile Include="ResultInfo.cs" />
+    <Compile Include="Q2Message.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="Payload.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

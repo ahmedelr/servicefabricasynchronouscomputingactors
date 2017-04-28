@@ -19,42 +19,46 @@
 
 #region Using Directives
 
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 #endregion
 
 namespace Microsoft.AzureCat.Samples.Entities
 {
-    public class Result
+    /// <summary>
+    ///     Represents messages elaborated by the worker and processor actors.
+    /// </summary>
+    public class ResultingStatus
     {
         /// <summary>
-        ///     Gets or sets the message id.
+        ///     Gets or sets the filing.
         /// </summary>
-        [JsonProperty(PropertyName = "messageId", Order = 1)]
-        public string MessageId { get; set; }
+        [JsonProperty(PropertyName = "filing", Order = 1)]
+        public Filing Filing { get; set; }
 
         /// <summary>
-        ///     Gets or sets the start time.
+        ///     Gets or sets the referenceRange.
         /// </summary>
-        [JsonProperty(PropertyName = "startTime", Order = 2)]
-        public string StartTime { get; set; }
+        [JsonProperty(PropertyName = "referenceRange", Order = 2)]
+        public ReferenceRange ReferenceRange { get; set; }
 
         /// <summary>
-        ///     Gets or sets the endTime.
+        ///     Gets or sets the delta.
         /// </summary>
-        [JsonProperty(PropertyName = "endTime", Order = 3)]
-        public string EndTime { get; set; }
+        [JsonProperty(PropertyName = "delta", Order = 3)]
+        public Delta Delta { get; set; }
 
         /// <summary>
-        ///     Gets or sets the status.
+        ///     Gets or sets the customRule
         /// </summary>
-        [JsonProperty(PropertyName = "status", Order = 4)]
-        public string Status { get; set; }
+        [JsonProperty(PropertyName = "customRule", Order = 4)]
+        public CustomRule CustomRule { get; set; }
 
         /// <summary>
-        ///     Gets or sets the result.
+        ///     Gets or sets the errormessage
         /// </summary>
-        [JsonProperty(PropertyName = "returnValue", Order = 5)]
-        public long ReturnValue { get; set; }
+        [JsonProperty(PropertyName = "errormessage", Order = 5)]
+        public string ErrorMessage { get; set; }
     }
 }

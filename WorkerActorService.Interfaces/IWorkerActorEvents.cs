@@ -19,6 +19,7 @@
 
 #region Using Directives
 
+using Microsoft.AzureCat.Samples.Entities;
 using Microsoft.ServiceFabric.Actors;
 
 #endregion
@@ -31,6 +32,6 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService.Interfaces
     /// </summary>
     public interface IWorkerActorEvents : IActorEvents
     {
-        void MessageProcessingCompleted(string messageId, long returnValue);
+        void MessageProcessingCompleted(Q2Message message, string messageId, string startTime, string endTime, string status, long returnValue);
     }
 }

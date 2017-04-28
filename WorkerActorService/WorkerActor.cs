@@ -57,6 +57,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         private const string AvgValueState = "avgValue";
         private const string ResultQueueState = "resultQueue";
         private const string ProcessingState = "state";
+        private const string ParallelMessagesState = "parallelMsgs";
 
         #endregion
 
@@ -150,6 +151,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                 await StateManager.TryAddStateAsync(TotValueState, (long) 0);
                 await StateManager.TryAddStateAsync(AvgValueState, (double) 0);
                 await StateManager.TryAddStateAsync(ResultQueueState, new Queue<Result>(queueLength));
+                await StateManager.TryAddStateAsync(ParallelMessagesState, new Queue<Q2Message>(2));
 
                 // Logs event
                 ActorEventSource.Current.Message($"Worker Actor [{Id}] activated.");
@@ -185,7 +187,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         /// </summary>
         /// <param name="message">The message to process.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        public async Task<bool> StartSequentialProcessingAsync(Message message)
+        public async Task<bool> StartSequentialProcessingAsync(Q2Message message)
         {
             // Parameters validation
             if (string.IsNullOrWhiteSpace(message?.MessageId) ||
@@ -273,7 +275,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         /// </summary>
         /// <param name="message">The message to process.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        public async Task<bool> StartParallelProcessingAsync(Message message)
+        public async Task<bool> StartParallelProcessingAsync(Q2Message message)
         {
             // Parameters validation
             if (string.IsNullOrWhiteSpace(message?.MessageId) ||
@@ -486,7 +488,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         /// <param name="messageId">The message id.</param>
         /// <param name="returnValue">The message processing result.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        public async Task<bool> ReturnSequentialProcessingAsync(string messageId, long returnValue)
+        public async Task<bool> ReturnSequentialProcessingAsync(Q2Message message, string messageId, string startTime, string endTime, string status, long returnValue)
         {
             // Parameters validation
             if (string.IsNullOrWhiteSpace(messageId))
@@ -510,7 +512,10 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
 
                 // Raises event
                 var ev = GetEvent<IWorkerActorEvents>();
-                ev.MessageProcessingCompleted(messageId, returnValue);
+                if (status == "customRule")
+                {
+                    ev.MessageProcessingCompleted(message, messageId, startTime, endTime, status, returnValue);
+                }
 
                 // Updates internal statistics
                 var ok = true;
@@ -550,6 +555,9 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                             new Result
                             {
                                 MessageId = messageId,
+                                StartTime = startTime,
+                                EndTime = endTime,
+                                Status = status,
                                 ReturnValue = returnValue
                             });
 
@@ -607,7 +615,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         /// <param name="messageId">The message id.</param>
         /// <param name="returnValue">The message processing result.</param>
         /// <returns>True if the operation completes successfully, false otherwise.</returns>
-        public async Task<bool> ReturnParallelProcessingAsync(string messageId, long returnValue)
+        public async Task<bool> ReturnParallelProcessingAsync(Q2Message message, string messageId, long returnValue)
         {
             // Parameters validation
             if (string.IsNullOrWhiteSpace(messageId))
@@ -630,7 +638,20 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
 
                 // Raises event
                 var ev = GetEvent<IWorkerActorEvents>();
-                ev.MessageProcessingCompleted(messageId, returnValue);
+                //ev.MessageProcessingCompleted(messageId, returnValue);
+
+                // Retrieves the ParallelMessages from the actor state 
+                var parMsgs = await StateManager.TryGetStateAsync<Queue<Q2Message>>(ParallelMessagesState);
+                if (parMsgs.HasValue)
+                {
+                    var queue = parMsgs.Value;
+
+                    // Enqueues the latest result
+                    queue.Enqueue(message);
+
+                    // Saves the ParallelMessagesState queue
+                    await StateManager.SetStateAsync<Queue<Q2Message>>(ParallelMessagesState, queue);
+                }
 
                 // Retrieves the CancellationTokenSource from the actor state 
                 var result = await StateManager.TryGetStateAsync<CancellationTokenSource>(messageId);
@@ -693,7 +714,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
 
                         // Saves the result queue
                         await StateManager.SetStateAsync(ResultQueueState, queue);
-
+                        
                         // Delete the processor actor
                         var actorId = new ActorId(messageId);
                         var actorServiceProxy = ActorServiceProxy.Create(processorActorServiceUri, actorId);
@@ -972,6 +993,44 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                                                  isSuccess ? "Succeded" : "Failed");
             }
             return null;
+        }
+
+        /// <summary>
+        ///     Gets the messages from StateManager which were added through a parallel processing call from ProcessorActor.
+        ///     This method gives the Processor a way to retrieve the final message from the ReferenceRange and Delta processing.
+        /// </summary>
+        /// <param name="runningState">True if the sequential processing task is still running, false otherwise.</param>
+        /// <returns>True if the operation completes successfully, false otherwise.</returns>
+        public async Task<Q2Message> GetParallelProcessingResultAsync()
+        {
+            var retMsg = new Q2Message();
+
+            // Get the messages from StateManager
+            var parMsgs = await StateManager.TryGetStateAsync<Queue<Q2Message>>(ParallelMessagesState);
+            if (parMsgs.HasValue && (parMsgs.Value != null))
+            {
+                var messages = parMsgs.Value;
+                var rrResult = new ReferenceRange();
+                
+                foreach (Q2Message msg in messages)
+                {
+                    if (msg.MessageId.EndsWith("delta"))
+                    {
+                        // Using delta to create the return message, resetting the messageId
+                        retMsg = msg;
+                        retMsg.MessageId = retMsg.MessageId.Substring(0, retMsg.MessageId.Length - 5);
+                    }
+                    else
+                    {
+                        rrResult = msg.ResultingStatus.ReferenceRange;
+                    }
+                }
+
+                // Now combine into a single message
+                retMsg.ResultingStatus.ReferenceRange = rrResult;
+            }
+
+            return retMsg;
         }
 
         #endregion

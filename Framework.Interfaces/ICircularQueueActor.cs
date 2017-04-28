@@ -40,24 +40,24 @@ namespace Microsoft.AzureCat.Samples.Framework.Interfaces
         /// </summary>
         /// <param name="item">The object to add to the circular queue. The value cannot be null.</param>
         /// <returns>The asynchronous result of the operation.</returns>
-        Task EnqueueAsync(Message item);
+        Task EnqueueAsync(Q2Message item);
 
         /// <summary>
         ///     Removes and returns the object at the beginning of the circular queue.
         /// </summary>
         /// <returns>The object that is removed from the beginning of the circular queue.</returns>
-        Task<Message> DequeueAsync();
+        Task<Q2Message> DequeueAsync();
 
         /// <summary>
         ///     Removes and returns a collection collection containing all the objects in the circular queue.
         /// </summary>
         /// <returns>A collection containing all the objects in the queue.</returns>
-        Task<IEnumerable<Message>> DequeueAllAsync();
+        Task<IEnumerable<Q2Message>> DequeueAllAsync();
 
         /// <summary>
         ///     Returns the object at the beginning of the circular queue without removing it.
         /// </summary>
         /// <returns>The object at the beginning of the circular queue.</returns>
-        Task<Message> PeekAsync();
+        Task<Q2Message> PeekAsync();
     }
 }

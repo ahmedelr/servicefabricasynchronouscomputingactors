@@ -96,7 +96,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                 var workerIdResult = await StateManager.TryGetStateAsync<string>(WorkerId);
 
                 // Retrieves the message
-                var messageResult = await StateManager.TryGetStateAsync<Message>(Message);
+                var messageResult = await StateManager.TryGetStateAsync<Q2Message>(Message);
 
                 // Retrieves the cancellation token source from the actor state
                 var cancellationTokenResult = await StateManager.TryGetStateAsync<CancellationToken>(messageId);
@@ -135,7 +135,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         /// <param name="message">The message to process</param>
         /// <param name="cancellationToken">The cancellation token to interrupt message processing.</param>
         /// <returns>The object at the beginning of the circular queue.</returns>
-        protected virtual async Task InternalProcessParallelMessageAsync(string workerId, Message message, CancellationToken cancellationToken)
+        protected virtual async Task InternalProcessParallelMessageAsync(string workerId, Q2Message message, CancellationToken cancellationToken)
         {
             try
             {
@@ -194,32 +194,61 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                 }
 
                 // NOTE!!!! This section should be replaced by some real computation
-                for (var i = 0; i < steps; i++)
-                {
-                    ActorEventSource.Current.Message($"MessageId=[{message.MessageId}] Body=[{message.Body}] ProcessStep=[{i + 1}]");
-                    try
-                    {
-                        await Task.Delay(delay, cancellationToken);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                    }
+                string stage = message.MessageId.EndsWith("delta") ? "delta" : "referenceRange";
 
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        continue;
-                    }
-                    // NOTE: If message processing has been cancelled, 
-                    // the method returns immediately without any result
-                    ActorEventSource.Current.Message($"MessageId=[{message.MessageId}] elaboration has been canceled and parallel message processing stopped.");
-                    return;
+                ActorEventSource.Current.Message(
+                    $"MessageId=[{message.MessageId}] Body=[{message.Body}] ProcessStep=[{stage}]");
+
+                var startTime = DateTime.Now.ToShortTimeString();
+                var endTime = DateTime.Now.AddMinutes(1).ToShortTimeString();
+
+                // Update message based on stage
+                switch (stage)
+                {
+                    case "referenceRange":
+                        message.ResultingStatus.ReferenceRange.StartTime = startTime;
+                        // Call processing method here
+                        message.ResultingStatus.ReferenceRange.EndTime = endTime;
+                        message.ResultingStatus.ReferenceRange.Status = stage;
+                        break;
+                    case "delta":
+                        message.ResultingStatus.Delta.StartTime = startTime;
+                        // Call processing method here
+                        message.ResultingStatus.Delta.EndTime = endTime;
+                        message.ResultingStatus.Delta.Status = stage;
+                        break;
+                    default:
+                        break;
                 }
+
+                // Processing when using steps. Currently not using this.
+                //for (var i = 0; i < steps; i++)
+                //{
+                //    ActorEventSource.Current.Message($"MessageId=[{message.MessageId}] Body=[{message.Body}] ProcessStep=[{i + 1}]");
+                //    try
+                //    {
+                //        await Task.Delay(delay, cancellationToken);
+                //    }
+                //    catch (TaskCanceledException)
+                //    {
+                //    }
+
+                //    if (!cancellationToken.IsCancellationRequested)
+                //    {
+                //        continue;
+                //    }
+                //    // NOTE: If message processing has been cancelled, 
+                //    // the method returns immediately without any result
+                //    ActorEventSource.Current.Message($"MessageId=[{message.MessageId}] elaboration has been canceled and parallel message processing stopped.");
+                //    return;
+                //}
+
                 ActorEventSource.Current.Message($"MessageId=[{message.MessageId}] has been successfully processed.");
 
                 var workerActorProxy = ActorProxy.Create<IWorkerActor>(new ActorId(workerId), workerActorServiceUri);
 
-                for (var n = 1; n <= 10; n++)
-                {
+                //for (var n = 1; n <= 10; n++)
+                //{
                     try
                     {
                         // Simulates a return value between 1 and 100
@@ -227,7 +256,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                         var returnValue = random.Next(1, 101);
 
                         // Stops the current processing task: it removes the corresponding state from the worker actor
-                        var ok = await workerActorProxy.ReturnParallelProcessingAsync(message.MessageId, returnValue);
+                        var ok = await workerActorProxy.ReturnParallelProcessingAsync(message, message.MessageId, returnValue);
                         if (ok)
                         {
                             ActorEventSource.Current.Message($"Parallel processing of MessageId=[{message.MessageId}] successfully stopped.");
@@ -251,7 +280,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                         throw;
                     }
                     Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).Wait(cancellationToken);
-                }
+                //}
                 throw new TimeoutException();
             }
             catch (Exception ex)
@@ -286,7 +315,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
         {
             try
             {
-                Message message;
+                Q2Message message;
 
                 // Creates the proxy to call the queue actor
                 var queueActorProxy = ActorProxy.Create<ICircularQueueActor>(new ActorId(Id.ToString()),
@@ -310,8 +339,28 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                         // Create delay variable and assign 1 second as default value
                         var delay = TimeSpan.FromSeconds(1);
 
+                        string stage = "";
+
+                        // Get current status, if exists
+                        if (message.ResultingStatus.Filing.Status == "")
+                        {
+                            stage = "filing";
+                        }
+                        else if (message.ResultingStatus.ReferenceRange.Status == "")
+                        {
+                            stage = "referenceRange";
+                        }
+                        else if (message.ResultingStatus.Delta.Status == "")
+                        {
+                            stage = "delta";
+                        }
+                        else if (message.ResultingStatus.CustomRule.Status == "")
+                        {
+                            stage = "customRule";
+                        };
+
                         // Create steps variable and assign 10 as default value
-                        var steps = 10;
+                        var steps = 3;
 
                         if (message.Properties != null)
                         {
@@ -357,60 +406,173 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                         }
 
                         // NOTE!!!! This section should be replaced by some real computation
-                        for (var i = 0; i < steps; i++)
-                        {
-                            ActorEventSource.Current.Message(
-                                $"MessageId=[{message.MessageId}] Body=[{message.Body}] ProcessStep=[{i + 1}]");
-                            try
-                            {
-                                await Task.Delay(delay, cancellationToken);
-                            }
-                            catch (TaskCanceledException)
-                            {
-                            }
+                        ActorEventSource.Current.Message(
+                                $"MessageId=[{message.MessageId}] Body=[{message.Body}] ProcessStep=[{stage}]");
 
-                            if (!cancellationToken.IsCancellationRequested)
-                                continue;
-                            // NOTE: If message processing has been cancelled, 
-                            // the method returns immediately without any result
-                            ActorEventSource.Current.Message(
-                                $"MessageId=[{message.MessageId}] elaboration has been canceled and sequential message processing stopped.");
-                            return;
+                        var startTime = DateTime.Now.ToShortTimeString();
+                        var endTime = DateTime.Now.AddMinutes(1).ToShortTimeString();
+                        
+                        // Update message based on stage
+                        switch (stage)
+                        {
+                            case "filing":
+                                message.ResultingStatus.Filing.StartTime = startTime;
+                                // Call processing method here
+                                message.ResultingStatus.Filing.EndTime = endTime;
+                                message.ResultingStatus.Filing.Status = stage;
+                                // Enqueues the message for next stage
+                                await queueActorProxy.EnqueueAsync(message);
+                                break;
+                            case "referenceRange":
+                                message.ResultingStatus.ReferenceRange.StartTime = startTime;
+                                // Call processing method here
+                                message.ResultingStatus.ReferenceRange.EndTime = endTime;
+                                message.ResultingStatus.ReferenceRange.Status = stage;
+
+                                // Going to use Worker to handle parallel processing initiation, so creating an external task here to do processing
+                                // using a separate ProcessorActor per message.
+                                var taskList = new List<Task>();
+                                Func<string, Task> waitHandler = async messageId =>
+                                {
+                                    try
+                                    {
+                                        while (await workerActorProxy.IsParallelProcessingRunningAsync(messageId))
+                                        {
+                                            Console.WriteLine($" - [{DateTime.Now.ToLocalTime()}] Waiting for [{messageId}] parallel processing task completion...");
+                                            await Task.Delay(TimeSpan.FromSeconds(1));
+                                        }
+                                        ActorEventSource.Current.Message($" - [{DateTime.Now.ToLocalTime()}] [{messageId}] Parallel message processing task completed.");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        ActorEventSource.Current.Message(ex.Message);
+                                    }
+                                };
+
+                                // Create two Q2Message instances and pas them into StartParallelProcessingAsync
+                                var deltaMessage = message.CopyForDelta();
+                                message.MessageId = message.MessageId + "RR"; // Using the same message, but changing the ID so as not to conflict with the incoming state manager
+
+                                List<Q2Message> messageList = new List<Q2Message>();
+                                messageList.Add(message);
+                                messageList.Add(deltaMessage);
+
+                                // Start parallel processing
+                                foreach (var parallelMessage in messageList)
+                                {
+                                    if (!workerActorProxy.StartParallelProcessingAsync(parallelMessage).Result)
+                                    {
+                                        continue;
+                                    }
+                                    taskList.Add(waitHandler(message.MessageId));
+                                    ActorEventSource.Current.Message($" - [{DateTime.Now.ToLocalTime()}] Message [{JsonSerializerHelper.Serialize(parallelMessage)}] sent.");
+                                }
+
+                                // Wait for message processing completion
+                                Task.WaitAll(taskList.ToArray());
+
+                                // Get the final combined message from the WorkerActor
+                                message = workerActorProxy.GetParallelProcessingResultAsync().Result;
+
+                                // Enqueues the message for next stage
+                                await queueActorProxy.EnqueueAsync(message);
+                                break;
+                            case "customRule":
+                                message.ResultingStatus.CustomRule.StartTime = startTime;
+                                // Call processing method here
+                                message.ResultingStatus.CustomRule.EndTime = endTime;
+                                message.ResultingStatus.CustomRule.Status = stage;
+
+                                // Final stage, return back to worker
+                                try
+                                {
+                                    // Simulates a return value between 1 and 100
+                                    var random = new Random();
+                                    var returnValue = random.Next(1, 101);
+
+                                    // Returns result to worker actor
+                                    await workerActorProxy.ReturnSequentialProcessingAsync(message, message.MessageId, startTime, endTime, stage, returnValue);
+
+                                    //Logs event
+                                    ActorEventSource.Current.Message(
+                                        $"Sequential processing of MessageId=[{message.MessageId}] ReturnValue=[{returnValue}] successfully returned.");
+                                    break;
+                                }
+                                catch (FabricTransientException ex)
+                                {
+                                    ActorEventSource.Current.Message(ex.Message);
+                                }
+                                catch (AggregateException ex)
+                                {
+                                    foreach (var e in ex.InnerExceptions)
+                                        ActorEventSource.Current.Message(e.Message);
+                                }
+                                catch (Exception ex)
+                                {
+                                    ActorEventSource.Current.Message(ex.Message);
+                                }
+                                break;
+                            default:
+                                break;
                         }
+
+                        // Processing when steps are used. Currently not using this.
+                        //
+                        //for (var i = 0; i < steps; i++)
+                        //{
+                        //    ActorEventSource.Current.Message(
+                        //        $"MessageId=[{message.MessageId}] Body=[{message.Body}] ProcessStep=[{i + 1}]");
+                        //    try
+                        //    {
+                        //        await Task.Delay(delay, cancellationToken);
+                        //    }
+                        //    catch (TaskCanceledException)
+                        //    {
+                        //    }
+
+                        //    if (!cancellationToken.IsCancellationRequested)
+                        //        continue;
+                        //    // NOTE: If message processing has been cancelled, 
+                        //    // the method returns immediately without any result
+                        //    ActorEventSource.Current.Message(
+                        //        $"MessageId=[{message.MessageId}] elaboration has been canceled and sequential message processing stopped.");
+                        //    return;
+                        //}
+
                         ActorEventSource.Current.Message(
                             $"MessageId=[{message.MessageId}] has been successfully processed.");
 
-                        for (var n = 1; n <= 3; n++)
-                        {
-                            try
-                            {
-                                // Simulates a return value between 1 and 100
-                                var random = new Random();
-                                var returnValue = random.Next(1, 101);
+                        //for (var n = 1; n <= 3; n++)
+                        //{
+                        //    try
+                        //    {
+                        //        // Simulates a return value between 1 and 100
+                        //        var random = new Random();
+                        //        var returnValue = random.Next(1, 101);
 
-                                // Returns result to worker actor
-                                await workerActorProxy.ReturnSequentialProcessingAsync(message.MessageId, returnValue);
+                        //        // Returns result to worker actor
+                        //        await workerActorProxy.ReturnSequentialProcessingAsync(message, message.MessageId, startTime, endTime, stage, returnValue);
 
-                                //Logs event
-                                ActorEventSource.Current.Message(
-                                    $"Sequential processing of MessageId=[{message.MessageId}] ReturnValue=[{returnValue}] successfully returned.");
-                                break;
-                            }
-                            catch (FabricTransientException ex)
-                            {
-                                ActorEventSource.Current.Message(ex.Message);
-                            }
-                            catch (AggregateException ex)
-                            {
-                                foreach (var e in ex.InnerExceptions)
-                                    ActorEventSource.Current.Message(e.Message);
-                            }
-                            catch (Exception ex)
-                            {
-                                ActorEventSource.Current.Message(ex.Message);
-                            }
-                            Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).Wait(cancellationToken);
-                        }
+                        //        //Logs event
+                        //        ActorEventSource.Current.Message(
+                        //            $"Sequential processing of MessageId=[{message.MessageId}] ReturnValue=[{returnValue}] successfully returned.");
+                        //        break;
+                        //    }
+                        //    catch (FabricTransientException ex)
+                        //    {
+                        //        ActorEventSource.Current.Message(ex.Message);
+                        //    }
+                        //    catch (AggregateException ex)
+                        //    {
+                        //        foreach (var e in ex.InnerExceptions)
+                        //            ActorEventSource.Current.Message(e.Message);
+                        //    }
+                        //    catch (Exception ex)
+                        //    {
+                        //        ActorEventSource.Current.Message(ex.Message);
+                        //    }
+                        //    Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).Wait(cancellationToken);
+                        //}
                     }
                     catch (Exception ex)
                     {
@@ -450,7 +612,7 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
             }
         }
 
-        public async Task ProcessParallelMessagesAsync(string workerId, Message message,
+        public async Task ProcessParallelMessagesAsync(string workerId, Q2Message message,
             CancellationToken cancellationToken)
         {
             try
