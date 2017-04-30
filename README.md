@@ -1,3 +1,4 @@
+This branch, Q2, was built for a specific message processing scenario and should only be viewed in the context of that scenario.
 ---
 services: service-fabric
 platforms: dotnet

@@ -118,64 +118,64 @@ namespace Microsoft.AzureCat.Samples.TestClient
         {
             new Test
             {
-                Name = "Sequential Test Via Actor Proxy",
-                Description = "Simulates an actor processing messages in a sequential order.",
+                Name = "Orchestrated Test Via Actor Proxy",
+                Description = "Simulates an actor processing messages in a sequential order with embedded parallel tasks.",
                 Action = TestSequentialProcessingTaskViaActorProxy
-            },
-            new Test
-            {
-                Name = "Sequential Test Via Gateway Service",
-                Description = "Simulates an actor processing messages in a sequential order.",
-                Action = TestSequentialProcessingTaskViaGatewayService
-            },
-            new Test
-            {
-                Name = "Parallel Test Via Actor Proxy",
-                Description = "Simulates an actor processing messages in parallel.",
-                Action = TestParallelMessageProcessingViaActorProxy
-            },
-            new Test
-            {
-                Name = "Parallel Test Via Gateway Service",
-                Description = "Simulates an actor processing messages in parallel.",
-                Action = TestParallelMessageProcessingViaGatewayService
-            },
-            new Test
-            {
-                Name = "Get Statistics Via Actor Proxy",
-                Description = "Retrieves the processing statistics.",
-                Action = TestGetProcessingStatisticsViaActorProxy
-            },
-            new Test
-            {
-                Name = "Get Statistics Via Gateway",
-                Description = "Retrieves the processing statistics.",
-                Action = TestGetProcessingStatisticsViaGateway
-            },
-            new Test
-            {
-                Name = "Stop Sequential Test Via Actor Proxy",
-                Description = "Stops the sequential message processing task using a cancellation token.",
-                Action = StopSequentialProcessingTaskViaActorProxy
-            },
-            new Test
-            {
-                Name = "Stop Parallel Test Via Actor Proxy",
-                Description = "Stops a parallel message processing task using a cancellation token.",
-                Action = StopParallelProcessingTaskViaActorProxy
-            },
-            new Test
-            {
-                Name = "Enumerate Actors Via Proxy",
-                Description = "Enumerates actors.",
-                Action = EnumerateActorsViaActorProxy
-            },
-            new Test
-            {
-                Name = "Delete Actors Via Proxy",
-                Description = "Deletes actors.",
-                Action = DeleteActorsViaActorProxy
-            }
+            }//,
+            //new Test
+            //{
+            //    Name = "Sequential Test Via Gateway Service",
+            //    Description = "Simulates an actor processing messages in a sequential order.",
+            //    Action = TestSequentialProcessingTaskViaGatewayService
+            //},
+            //new Test
+            //{
+            //    Name = "Parallel Test Via Actor Proxy",
+            //    Description = "Simulates an actor processing messages in parallel.",
+            //    Action = TestParallelMessageProcessingViaActorProxy
+            //},
+            //new Test
+            //{
+            //    Name = "Parallel Test Via Gateway Service",
+            //    Description = "Simulates an actor processing messages in parallel.",
+            //    Action = TestParallelMessageProcessingViaGatewayService
+            //},
+            //new Test
+            //{
+            //    Name = "Get Statistics Via Actor Proxy",
+            //    Description = "Retrieves the processing statistics.",
+            //    Action = TestGetProcessingStatisticsViaActorProxy
+            //},
+            //new Test
+            //{
+            //    Name = "Get Statistics Via Gateway",
+            //    Description = "Retrieves the processing statistics.",
+            //    Action = TestGetProcessingStatisticsViaGateway
+            //},
+            //new Test
+            //{
+            //    Name = "Stop Sequential Test Via Actor Proxy",
+            //    Description = "Stops the sequential message processing task using a cancellation token.",
+            //    Action = StopSequentialProcessingTaskViaActorProxy
+            //},
+            //new Test
+            //{
+            //    Name = "Stop Parallel Test Via Actor Proxy",
+            //    Description = "Stops a parallel message processing task using a cancellation token.",
+            //    Action = StopParallelProcessingTaskViaActorProxy
+            //},
+            //new Test
+            //{
+            //    Name = "Enumerate Actors Via Proxy",
+            //    Description = "Enumerates actors.",
+            //    Action = EnumerateActorsViaActorProxy
+            //},
+            //new Test
+            //{
+            //    Name = "Delete Actors Via Proxy",
+            //    Description = "Deletes actors.",
+            //    Action = DeleteActorsViaActorProxy
+            //}
         };
 
         private static readonly string Line = new string('-', 129);
