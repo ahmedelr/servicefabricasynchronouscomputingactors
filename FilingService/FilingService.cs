@@ -103,8 +103,15 @@ namespace FilingService
         // Create a DB record with the Json Lab Result payload
         public async Task<string> FiletoDBAsync(Q2Message message)
         {
-            await client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(DatabaseId, CollectionId), message);
-            return "Successfully inserted in DB";
+            try
+            {
+                await client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(DatabaseId, CollectionId), message);
+                return "Successfully inserted in DB";
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
         }
     }
 }
