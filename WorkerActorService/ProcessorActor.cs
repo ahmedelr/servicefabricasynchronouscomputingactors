@@ -31,6 +31,9 @@ using Microsoft.AzureCat.Samples.WorkerActorService.Interfaces;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Client;
 using Microsoft.ServiceFabric.Actors.Runtime;
+using Microsoft.ServiceFabric.Services.Remoting.Client;
+using Microsoft.ServiceFabric.Services.Remoting;
+using FilingService;
 
 #endregion
 
@@ -341,7 +344,9 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
 
                         string stage = "";
 
-                        // Get current status, if exists
+                        /// Get current stage, if exists
+                        /// Iterate message through sequential stages:
+                        /// filing, referenceRange, delta, then customRule
                         if (message.ResultingStatus.Filing.Status == "")
                         {
                             stage = "filing";
@@ -417,15 +422,23 @@ namespace Microsoft.AzureCat.Samples.WorkerActorService
                         {
                             case "filing":
                                 message.ResultingStatus.Filing.StartTime = startTime;
-                                // Call processing method here
+                                
+                                // Call Filing Service
+                                IFileService filetoDBClient = ServiceProxy.Create<IFileService>(new Uri("fabric:/LongRunningActors/FilingService"));
+                                string dbMessage = await filetoDBClient.FiletoDBAsync(message);
+                                Console.WriteLine(dbMessage);
+
                                 message.ResultingStatus.Filing.EndTime = endTime;
                                 message.ResultingStatus.Filing.Status = stage;
+                                
                                 // Enqueues the message for next stage
                                 await queueActorProxy.EnqueueAsync(message);
                                 break;
                             case "referenceRange":
                                 message.ResultingStatus.ReferenceRange.StartTime = startTime;
-                                // Call processing method here
+
+                                // Call Reference Range Service here
+
                                 message.ResultingStatus.ReferenceRange.EndTime = endTime;
                                 message.ResultingStatus.ReferenceRange.Status = stage;
 
